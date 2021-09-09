@@ -58,32 +58,38 @@ const Header = ({username}) => {
 }
 
 const Displayer = ({taskListVisibility, formVisibility, isListVisible, isFormVisible}) => {
-  const [taskList, setTaskList] = useState([{id: 1, taskTitle: "XD"}])
+  const [taskList, setTaskList] = useState([])
+  const [taskListLength, setLength] = useState(0)
+
+  const setTaskListLength = () => {
+    setLength((prev) => prev + 1)
+  }
 
   return(
       <View style={styles.container}>
-        {taskListVisibility && <TaskList taskList={taskList}/>}
-        {formVisibility && <Form taskList={taskList} setTaskList={setTaskList} isListVisible={isListVisible} isFormVisible={isFormVisible}/>}
+        {taskListVisibility && <TaskList taskList={taskList} setTaskList={setTaskList}/>}
+        {formVisibility && <Form taskListLength={taskListLength} setTaskListLength={setTaskListLength} setTaskList={setTaskList} isListVisible={isListVisible} isFormVisible={isFormVisible}/>}
       </View>
   );
 }
 
-const TaskList = ({taskList}) => {
+const TaskList = ({taskList, setTaskList}) => {
   return (
       <View style={styles.container}>
         <FlatList
             keyExtractor={item => item.id.toString()}
             data={taskList}
             renderItem={({ item }) => (
-                <Task taskId={item.id} taskTitle={item.taskTitle}/>
-            )} />
+                <Task taskTitle={item.taskTitle} taskId={item.id} setTaskList={setTaskList}/>
+            )}
+        />
       </View>
   );
 }
 
 const Task = ({taskId, taskTitle}) => {
   return(
-      <View style={styles.taskView}>
+      <View style={styles.taskView} onPress={() => console.log("Delete")}>
         <Text style={styles.taskText}>{taskId}</Text>
         <Text style={styles.taskText}>{taskTitle}</Text>
       </View>
@@ -108,7 +114,7 @@ const Footer = ({isListVisible, isFormVisible}) => {
   );
 }
 
-const Form = ({taskList, setTaskList, isListVisible, isFormVisible}) => {
+const Form = ({taskListLength, setTaskListLength, setTaskList, isListVisible, isFormVisible}) => {
   const [input, setInput] = useState("")
 
   const changeInput = (value) => {
@@ -118,18 +124,19 @@ const Form = ({taskList, setTaskList, isListVisible, isFormVisible}) => {
   const changeDisplayerContent = () => {
     isFormVisible(false)
     isListVisible(true)
+    setTaskListLength()
     setInput("")
   }
 
   const confirmInput = () => {
-    const newItemKey = taskList.length + 1
-    setTaskList({id: newItemKey, taskTitle: input})
+    if(input !== ""){
+      setTaskList((prevState) => [...prevState, {id: taskListLength + 1, taskTitle: input}])
+    }
   }
 
   const addToList = () => {
     confirmInput()
     changeDisplayerContent()
-    console.log(taskList)
   }
 
   return(
