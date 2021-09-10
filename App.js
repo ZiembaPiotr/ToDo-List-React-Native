@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import React, {useState} from 'react';
-import {Button, StyleSheet, Text, TextInput, View, Pressable, Image, ScrollView, FlatList} from 'react-native';
+import {Button, StyleSheet, Text, TextInput, View, Pressable, Image, ScrollView, FlatList, TouchableWithoutFeedback, Keyboard} from 'react-native';
+import {useCycle} from "framer-motion";
 
 export default function App() {
   const [username, setUserName] = useState("")
@@ -22,13 +23,15 @@ export default function App() {
   }
 
   return (
-      <View style={styles.container}>
-        {!welcomeVisibility && (<Header username={username}/>)}
-        {welcomeVisibility && (<Welcome assignUserName={assignUserName} changeWelcomeVisibility={changeWelcomeVisibility} />)}
-        {!welcomeVisibility && (<Displayer taskListVisibility={taskListVisibility} formVisibility={formVisibility} isListVisible={isListVisible} isFormVisible={isFormVisible}/>)}
-        {!welcomeVisibility && (<Footer isListVisible={isListVisible} isFormVisible={isFormVisible}/>)}
-        <StatusBar style="auto" />
-      </View>
+      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+        <View style={styles.container}>
+          {!welcomeVisibility && (<Header username={username}/>)}
+          {welcomeVisibility && (<Welcome assignUserName={assignUserName} changeWelcomeVisibility={changeWelcomeVisibility} />)}
+          {!welcomeVisibility && (<Displayer taskListVisibility={taskListVisibility} formVisibility={formVisibility} isListVisible={isListVisible} isFormVisible={isFormVisible}/>)}
+          {!welcomeVisibility && (<Footer isListVisible={isListVisible} isFormVisible={isFormVisible}/>)}
+          <StatusBar style="auto" />
+        </View>
+      </TouchableWithoutFeedback>
   );
 }
 
@@ -68,31 +71,52 @@ const Displayer = ({taskListVisibility, formVisibility, isListVisible, isFormVis
   return(
       <View style={styles.container}>
         {taskListVisibility && <TaskList taskList={taskList} setTaskList={setTaskList}/>}
-        {formVisibility && <Form taskListLength={taskListLength} setTaskListLength={setTaskListLength} setTaskList={setTaskList} isListVisible={isListVisible} isFormVisible={isFormVisible}/>}
+        {formVisibility && <Form
+                              taskListLength={taskListLength}
+                              setTaskListLength={setTaskListLength}
+                              setTaskList={setTaskList}
+                              isListVisible={isListVisible}
+                              isFormVisible={isFormVisible}
+                              />}
       </View>
   );
 }
 
 const TaskList = ({taskList, setTaskList}) => {
+  const removeTask = (id) => {
+    setTaskList((previousState) => {
+      return previousState.filter((task) => task.id !== id)
+    })
+  }
+
   return (
       <View style={styles.container}>
         <FlatList
             keyExtractor={item => item.id.toString()}
             data={taskList}
             renderItem={({ item }) => (
-                <Task taskTitle={item.taskTitle} taskId={item.id} setTaskList={setTaskList}/>
+                <Task taskTitle={item.taskTitle} taskId={item.id} removeTask={removeTask}/>
             )}
         />
       </View>
   );
 }
 
-const Task = ({taskId, taskTitle}) => {
+const Task = ({taskId, taskTitle, removeTask}) => {
+  const [taskStyle, setTaskStyle] = useCycle(styles.taskView, styles.taskViewExpand)
+
+  const changeTaskStyle = () => {
+    setTaskStyle()
+  }
+
   return(
-      <View style={styles.taskView} onPress={() => console.log("Delete")}>
-        <Text style={styles.taskText}>{taskId}</Text>
-        <Text style={styles.taskText}>{taskTitle}</Text>
-      </View>
+      <Pressable
+          onPress={changeTaskStyle}
+          onLongPress={() => {removeTask(taskId)}}>
+        <View style={taskStyle}>
+          <Text style={styles.taskText}>{taskTitle}</Text>
+        </View>
+      </Pressable>
   );
 }
 
@@ -124,23 +148,26 @@ const Form = ({taskListLength, setTaskListLength, setTaskList, isListVisible, is
   const changeDisplayerContent = () => {
     isFormVisible(false)
     isListVisible(true)
-    setTaskListLength()
     setInput("")
   }
 
   const confirmInput = () => {
-    if(input !== ""){
+    if(input.length >= 2){
       setTaskList((prevState) => [...prevState, {id: taskListLength + 1, taskTitle: input}])
+    } else {
+      alert("Task input field can not be empty!")
     }
   }
 
   const addToList = () => {
     confirmInput()
+    setTaskListLength()
     changeDisplayerContent()
   }
 
   return(
       <View style={styles.container}>
+        <Text style={styles.formText}>Add new task!</Text>
         <TextInput
             onChangeText={changeInput}
             style={styles.taskInput}/>
@@ -148,6 +175,11 @@ const Form = ({taskListLength, setTaskListLength, setTaskList, isListVisible, is
             style={styles.buttonContainer}
             onPress={addToList}>
           <Text style={styles.formConfirmButton}>Confirm</Text>
+        </Pressable>
+        <Pressable
+          style={styles.buttonContainer}
+          onPress={changeDisplayerContent}>
+          <Text style={styles.formBackButton}>Back</Text>
         </Pressable>
       </View>
   );
@@ -245,6 +277,14 @@ const styles = StyleSheet.create({
     marginTop: 3,
     padding: 5,
   },
+  formText:{
+    color: "#373737",
+    fontSize: 30,
+    marginTop: 3,
+    padding: 5,
+    paddingBottom: 30,
+    fontWeight: "bold"
+  },
   taskInput: {
     margin: 8,
     padding: 5,
@@ -257,6 +297,12 @@ const styles = StyleSheet.create({
     height: 50,
   },
   formConfirmButton: {
+    color: "#373737",
+    fontSize: 24,
+    margin: 3,
+    padding: 5,
+  },
+  formBackButton: {
     color: "#373737",
     fontSize: 24,
     margin: 3,
